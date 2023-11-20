@@ -1,0 +1,199 @@
+---
+title: "WeatherTrendStatistics"
+subtitle: "Climate Harmony: Melbourne and Sydney"
+output:
+html_notebook: default
+---
+
+## Problem Statement
+
+Two data sets containing details on the Maximum Temperature, Solar Exposure and Wind Speed for the cities Melbourne and Sydney have been provided. The problem statement guiding the process is the investigation of any 2 variables among the 3 provided in the data sets. The aim of the investigation is to find useful insights in the data, finding correlation between the variables and analyzing if the data sets are normally distributed. The steps involved in this investigation are as follows:
+
+-   Imported the 2 separate data sets that are provided into the R environment.
+
+-   Checked if the data sets have similar structure (which will make it easier to bind them together as a single data set).
+
+-   The data sets contained similar structure, however small edits were made such as matching variable column names in the data sets, since only two stations are provided named the stations to their respective cities, converted the city variable into a factor and named the months.
+
+-   Since the investigation asks to pick two variables, created a scatter plot between the pairs of variables.
+
+-   Selected the variables Maximum Temperature and Solar Exposure.
+
+* Observation 145 for Sydney was missing (NA), since the NA values are less than 3% decided to omit this value during visualization and summarization.
+
+-   Proceeded to create summary statistics that described the mean, median, standard deviation, first and third quantile, interquartile range, minimum and maximum values grouped by the respective cities. Also included box plot to understand the distribution of observations.
+
+-   Then used the ggplot package to plot the empirical distribution using a histogram and then added geom_function() with dnorm() to describe a normally distributed curve with the same mean and standard deviation as the variables in investigation.
+
+## Load Packages
+
+```{r message=FALSE, warning=FALSE}
+# This is a chunk where you can load the necessary packages required to reproduce the report
+library(readr)
+library(dplyr)
+library(Hmisc)
+library(ggplot2)
+library(gridExtra)
+library(viridis)
+library(ggthemes)
+library(psych)
+```
+
+## Data
+
+Import the climate data and prepare it for analysis.
+
+```{r message=FALSE}
+# This is a chunk for your Data section. 
+melb_climate <- read_csv("./data/Climate Data Melbourne.csv")
+
+syd_climate <- read_csv("./data/Climate Data Sydney.csv")
+
+syd_climate <- syd_climate %>% select(-6) 
+syd_climate <- syd_climate %>% rename("Wind speed" = "maximum wind speed")
+
+# Main Dataframe
+climate_df <- rbind(melb_climate, syd_climate)
+
+dim(climate_df)
+str(climate_df)
+describe(climate_df[c(5,6,7)])
+
+climate_df$`Station number` <- as.factor(climate_df$`Station number`)
+levels(climate_df$`Station number`)
+levels(climate_df$`Station number`) <- c("Sydney", "Melbourne")
+
+climate_df$Month <- as.factor(climate_df$Month)
+levels(climate_df$Month)
+levels(climate_df$Month) <- c("January","February","December")
+
+climate_df <- climate_df %>% rename("City" = "Station number")
+
+is.na(climate_df$`Maximum Temperature`) %>% which()
+
+```
+
+## Variable Selection
+
+Chose between the three available variables in the data frame.
+
+```{r}
+
+my_cols <- c("#00AFBB", "#FC4E07")  
+
+pairs(climate_df[,5:7], pch = 19,  cex = 0.5,
+      col = my_cols[climate_df$City],
+      lower.panel=NULL)
+```
+
+The reason to choose Maximum Temperature and Solar Exposure is that they show a slightly better positive correlation comparatively to the other variables.
+
+## Summary Statistics
+
+Calculated descriptive statistics (i.e., mean, median, standard deviation, first and third quartile, interquartile range, minimum and maximum values) of the selected variable grouped by city.
+
+```{r}
+# This is a chunk for your Summary Statistics section. 
+climate_df %>% group_by(City) %>% 
+  summarise(Mean = mean(`Maximum Temperature`, na.rm = TRUE), 
+            Median = median(`Maximum Temperature`, na.rm = TRUE),
+            SD = sd(`Maximum Temperature`, na.rm = TRUE),
+            First_Quantile = quantile(`Maximum Temperature`,
+                                      na.rm = TRUE,probs = c(0.25)),
+            Third_Quantile = quantile(`Maximum Temperature`,
+                                      na.rm = TRUE,probs = c(0.75)),
+            IQR = IQR(`Maximum Temperature`, na.rm = TRUE),
+            Minimum = min(`Maximum Temperature`, na.rm = TRUE),
+            Maximum = max(`Maximum Temperature`, na.rm = TRUE ))
+ 
+
+# Descriptive Statistics grouped by city(`Solar Exposure`).
+
+climate_df %>% group_by(City) %>% 
+  summarise(Mean = mean(`Solar Exposure`), 
+            Median = median(`Solar Exposure`),
+            SD = sd(`Solar Exposure`),
+            First_Quantile = quantile(`Solar Exposure`,probs = c(0.25)),
+            Third_Quantile = quantile(`Solar Exposure`,probs = c(0.75)),
+            IQR = IQR(`Solar Exposure`),
+            Minimum = min(`Solar Exposure`),
+            Maximum = max(`Solar Exposure`))
+
+
+max_temp_boxplot <- climate_df %>% ggplot(aes(`Maximum Temperature`, City)) +
+  geom_boxplot(aes(fill = City), outlier.colour = "#1F477E", 
+               outlier.size = 2,
+               na.rm = TRUE) +
+  coord_flip() +
+  theme_economist()
+
+sol_exp_boxplot <- climate_df %>% ggplot(aes(`Solar Exposure`, `City`)) +
+  geom_boxplot(aes(fill = City)) +
+  coord_flip() +
+  theme_economist()
+
+grid.arrange(max_temp_boxplot, sol_exp_boxplot, ncol = 2)
+
+```
+
+## Distribution Fitting
+
+Compared the empirical distribution of selected variable to a normal distribution separately in Melbourne and in Sydney visually by plotting the histogram with normal distribution overlay.
+
+```{r}
+# This is a chunk for your Distribution Fitting section. 
+max_temp_hist <- climate_df %>% ggplot(aes(`Maximum Temperature`)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 1, col = "black", fill = "#1e81b0", na.rm = TRUE) +
+  geom_function(fun = dnorm,
+                args = list(mean = mean(climate_df$`Maximum Temperature`, na.rm = TRUE),
+                            sd = sd(climate_df$`Maximum Temperature`, na.rm = TRUE)),
+                col = "darkorange", linewidth = 2) +
+  facet_wrap(City~.) +
+  ggtitle("Max Temperature with Normal Distribution Overlay") +
+  xlab("Maximum Temperature") +
+  ylab("Density") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        axis.text = element_text(face = "bold"),
+        strip.text = element_text(face = "bold", size = 12),
+        panel.spacing = unit(1, "lines"))
+
+max_temp_hist
+
+
+sol_exp_hist <- climate_df %>% ggplot(aes(`Solar Exposure`)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 1, col = "black", fill = "#1e81b0") +
+  geom_function(fun = dnorm,
+                args = list(mean = mean(climate_df$`Solar Exposure`),
+                            sd = sd(climate_df$`Solar Exposure`)),
+                col = "darkorange", linewidth = 2) +
+  facet_wrap(City~.) +
+  ggtitle("Solar Exposure with Normal Distribution Overlay") +
+  xlab("Solar Exposure") +
+  ylab("Density") +
+  # theme_economist() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        axis.text = element_text(face = "bold"),
+        strip.text = element_text(face = "bold", size = 12),
+        panel.spacing = unit(1, "lines"),
+        panel.background = ) 
+
+
+sol_exp_hist
+
+```
+
+## Interpretation
+
+Going back to your problem statement, what insight has been gained from the investigation?
+
+-   Using the pairs of scatter plots between the 3 variables, Maximum Temperature and Solar Exposure show a better positive correlation. This insight directed the investigation to choose these variables for further analysis. Furthermore, due to this correlation it could be assumed that a higher Solar Exposure is one factor that dictates the temperature i.e. rise in Solar Exposure equals rise in Temperature.
+
+-   Checking the box plot grouped by the cities it was observed that Melbourne had an outlier recorded. However, this is a natural variation that was present. This data was cross checked with other sources which confirmed this occurrence.
+
+-   From the box plot it can also be inferred that Sydney experiences less colder temperatures compared to Melbourne, this is explained by the higher Solar Exposure in Sydney.
+
+-   Both Maximum Temperature and Solar Exposure are not normally distributed. Maximum Temperature in Melbourne is observed to be between 25-30 degrees.
+
+-   Solar Exposure is observed to be skewed to the right in the both cities. In both cases in the months of January, February and March the Solar Exposure does not go above 35.
