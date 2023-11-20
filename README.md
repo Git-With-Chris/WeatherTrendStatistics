@@ -19,10 +19,9 @@ The aim is to analyze the provided climate data sets for Melbourne and Sydney, f
 
 ## Preview
 
-[Plot 1](images/Plot1.png)
-[Plot 2](images/Plot2.png)
-[Plot 3](images/Plot3.png)
-[Plot 4](images/Plot4.png)
+![Plot 2](images/Plot2.png)
+![Plot 3](images/Plot3.png)
+![Plot 4](images/Plot4.png)
 
 ## Dependencies
 Ensure you have the following R packages installed:
