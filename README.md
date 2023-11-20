@@ -54,3 +54,7 @@ Ensure you have the following R packages installed:
 3 directories, 8 files
 
 ```
+
+## Contributing
+
+Contributions are welcome! If you find a bug or have an enhancement idea, please open an issue or submit a pull request.
